@@ -43,7 +43,13 @@ function handleDropboxError(error: any): never {
 // Get a Dropbox client with a valid token
 async function getDropboxClient(): Promise<Dropbox> {
     const token = config.dropbox.accessToken || await getValidAccessToken();
-    return new Dropbox({ accessToken: token });
+    const opts: Record<string, string> = { accessToken: token };
+    // For Business team tokens, select which member's files to access
+    const selectUser = process.env.DROPBOX_SELECT_USER;
+    if (selectUser) {
+        opts.selectUser = selectUser;
+    }
+    return new Dropbox(opts);
 }
 
 // Helper function to format paths for Dropbox API
@@ -741,6 +747,34 @@ async function getSharingLink(path: string): Promise<McpToolResponse> {
 
 async function getAccountInfo(): Promise<McpToolResponse> {
     try {
+        const token = config.dropbox.accessToken || await getValidAccessToken();
+        // For team tokens, use teamGetInfo; for personal, use usersGetCurrentAccount
+        const selectUser = process.env.DROPBOX_SELECT_USER;
+        if (selectUser) {
+            const teamClient = new Dropbox({ accessToken: token });
+            const teamResp = await teamClient.teamGetInfo();
+            const memberResp = await teamClient.teamMembersGetInfoV2({
+                members: [{ '.tag': 'team_member_id', team_member_id: selectUser }]
+            });
+            const memberInfo = (memberResp.result as any)[0]?.member_info?.profile || {};
+            return {
+                content: [{
+                    type: 'text',
+                    text: JSON.stringify({
+                        team_name: teamResp.result.name,
+                        team_id: teamResp.result.team_id,
+                        num_members: teamResp.result.num_provisioned_users,
+                        member: {
+                            email: memberInfo.email,
+                            name: memberInfo.name?.display_name,
+                            team_member_id: memberInfo.team_member_id,
+                            status: memberInfo.status?.['.tag'],
+                        }
+                    }, null, 2),
+                }],
+            };
+        }
+
         const client = await getDropboxClient();
         const response = await client.usersGetCurrentAccount();
 

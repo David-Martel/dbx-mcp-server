@@ -2,6 +2,7 @@
 node_modules/
 build/
 downloads/
+bun.lock
 
 # Environment and secrets
 .env
