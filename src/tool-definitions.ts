@@ -82,20 +82,6 @@ const toolDefinitions = [
       },
     },
     {
-      name: 'delete_item',
-      description: 'Legacy delete operation (deprecated, use safe_delete_item instead)',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          path: {
-            type: 'string',
-            description: 'Path to the file or folder to delete',
-          },
-        },
-        required: ['path'],
-      },
-    },
-    {
       name: 'create_folder',
       description: 'Create a new folder (integrates with Dropbox)',
       inputSchema: {
